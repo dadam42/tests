@@ -1,7 +1,7 @@
 #! /bin/bash
 
 SOURCES=(get_next_line get_next_line_utils)
-SRCSDIR=../repo/
+SRCSDIR=../../repo/
 CFLAGS="-Wall -Wextra -Werror"
 TESTS=(free_fd_test test)
 MSG_TESTFAILED="Test failed !"
