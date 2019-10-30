@@ -1,0 +1,125 @@
+#include "get_next_line.h"
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <string.h>
+
+#define TESTCOUNT 5
+#define MAXLINES 99
+#define MAX_FD 256
+
+inline int next_fdx(int fdx, int maxfdx)
+{
+	return ((fdx+ 1) % maxfdx + 1); 
+}
+
+void exec(int dest_fd, int *src_fd, int max_idx, int *error, char **argv)
+{
+	int idx;
+	char *line;
+	int more_read;
+	int gnl_ret;
+
+	idx = 2;
+	more_read = 0;
+	while (more_read - 2 + max_idx)
+	{
+		if (src_fd[idx - 2] > 0)
+		{
+			gnl_ret = get_next_line(src_fd[idx - 2], &line);
+			if (gnl_ret < 0)
+			{dprintf(2, "An error occured while reading the file [%d]%s\n", src_fd[idx - 2],argv[idx]);
+				*error = 1;
+			}
+			if (!*error)
+			{
+				dprintf(dest_fd, "%s%s", line, (gnl_ret ? "\n" :""));
+				free(line);
+				if (!gnl_ret)
+				{	
+					dprintf(2, "exe> [%d]eol\n", src_fd[idx - 2]);
+					src_fd[idx - 2] = -1;
+					more_read--;
+				}
+			}
+			else	break;
+		}
+		printf("exe> idx = %d[%d] aiming at fd %d then \n", idx - 2, max_idx - 2, src_fd[idx - 2]);
+		idx = 2 + (idx - 1) % (max_idx - 2);
+		printf("     idx = %d[%d] aiming at fd %d \n", idx - 2, max_idx - 2, src_fd[idx - 2]);
+	}
+}
+
+int main(int argc, char** argv)
+{
+	int dest_fd;
+	int src_fd[MAX_FD];
+	int error;
+	int idx;
+	char *error_msg[4] = {	"An error occured while gnl-ing the file %s.\n",
+		"Could not open file %s for reading.\n",
+		"Could not open file %s for writing. \n",
+		"argc NOT OK !\n"}; 
+	char *error_param[4];
+
+	error_param[0] = argv[2];
+	error_param[1] = argv[2];
+	error_param[2] = argv[1];
+	error_param[3] = NULL;
+	error = 0;
+	if (argc >= 3)
+	{
+		dprintf(2,"BUFFER_SIZE = %d\n", BUFFER_SIZE);
+		if ((dest_fd = open(argv[1], O_WRONLY | O_CREAT | O_TRUNC)) > 0)
+		{
+			fchmod(dest_fd, 0600);
+			idx = 2;
+			while (idx < argc)
+			{
+				if (!memcmp("-",argv[idx],2))
+				{
+					src_fd[idx - 2] = 0;
+				}
+				else
+				{
+					if ((src_fd[idx - 2] = open(argv[idx], O_RDONLY)) > 0)
+						printf("exe> could open the src file [%d]%s\n", src_fd[idx - 2], argv[idx]);
+					else
+					{
+						error_param[1] = argv[idx];
+						break;
+					}
+				}
+				idx++;
+			}
+			if (!error)
+			{
+				exec(dest_fd, src_fd, idx, &error, argv);
+			}
+			else
+				error = 2;
+		}
+		else
+			error = 3;
+	}
+	else
+		error = 4;
+	if (error)
+		printf(error_msg[error - 1], error_param[error - 1]);
+	return (error);
+}
+
+__attribute__((destructor)) void out()
+{
+	pid_t my_pid;
+	char cmd[50];
+
+	my_pid = getpid();
+	dprintf(2, "___out of main___ [job %d] \n", my_pid);
+	sprintf(cmd, "leaks %d", my_pid);
+	system(cmd);
+	while(1);
+}
