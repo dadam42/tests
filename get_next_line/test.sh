@@ -30,7 +30,7 @@ da42_compile() {
 	fi
 	echo "Compiling with command :"
 	echo "gcc $CFLAGS -D BUFFER_SIZE=${buffer_size} -I../repo/ $files $1.c -o $1"
-	gcc $CFLAGS -D BUFFER_SIZE=${buffer_size} -I../repo/ $files $1.c -o $1 
+	gcc $CFLAGS -D BUFFER_SIZE=${buffer_size} -I${SRCSDIR} $files $1.c -o $1 
 }
 
 da42_free_fd_test() {
